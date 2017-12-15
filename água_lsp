@@ -1,0 +1,245 @@
+;----------------------NIVEL DE AGUA ------------------------------------
+
+(defun c:agua ( / altlin  altxt1  altxt2  ano   data     dia      dcl_id
+                  flgniv  formato g:mens  lcolun  mes   msgtel   nivel    oldecho
+		  oldlay  prox    ptins   ptref
+              )
+ 
+;-------------------------------------------------------------------------  
+ (defun cl_erro ()
+  (set_tile "error" " ")               ; limpa tile de erro
+ )
+;-------------------------------------------------------------------------
+ (defun ok_real (ind var / tmp)    ; ------ Checa entrada de numero real 
+
+  (cond 
+   ((distof var 2)                 ; verifica se variavel converte para REAL
+    var                            ; retorna valor da variavel
+   )
+   (T                              ; Se nao -> Exibe mensagem erro
+    (setq tmp (strcat (nth ind msgtel) g:mens))
+    (set_tile "error" tmp)
+    nil                            ; retorna nil
+   )                  
+  )
+ )
+;--------------------------------------------------------------------------
+ (defun get_val (idmsg valor)   ; -------- Tratamento de dado de entrada
+ 
+  (cl_erro)                                  ; limpa tile de erro
+
+  (if (ok_real idmsg valor)
+   (atof valor)                              ; OK -> retorna dado convertido
+   nil                                       ; dado invalido - retorna nil
+  ) 
+ )
+ ; -------------------------------------------------------------------
+ (defun procura (chave string / ind strtmp)
+
+ ;--------------- Procura caractere "." na palavra ---------------
+
+  (setq strtmp  string)
+  (setq ind     1)
+  (while (and (/= (substr strtmp 1 1) chave) (<= ind (strlen string)))
+   (setq  strtmp  (substr strtmp 2)) ; Retira caractere da palavra
+   (setq  ind    (1+ ind))          ; Proximo caractere
+  )
+
+  (if (= (substr strtmp 1 1) chave)
+   (eval ind)            ; Retorna indice do caractere "."
+   (eval nil)            ; Palavra nao tem "/" --> Retorna nil
+  )
+ )
+
+;--------------------------------------------------------------------------
+ (defun checkok ( / diai mesi anoi nivelr)
+
+  (cl_erro)
+
+  (if nivel (setq nivelr  (atof nivel)))
+  (if dia   (setq diai    (atoi dia)))
+  (if mes   (setq mesi    (atoi mes)))
+  (if ano   (setq anoi    (atoi ano)))
+
+  (cond
+   ((or (and (= flgniv "1") (not nivelr))
+        (and (= flgniv "1") (< nivelr 0)))
+     (set_tile "error" "Nível de água Inválido")
+     (eval nil)
+   )
+   ((and (= flgniv "1")
+         (or (<= nivelr (* (1- formato) 20)) (> nivelr (* formato 20))))
+     (set_tile "error" "Nível incoerente com a pagina")
+     (eval nil)
+   )
+
+   ((or (not diai) (<= diai 0))
+     (set_tile "error" "Dia Inválido")
+     (eval nil)
+   )  
+   ((or (not mesi) (<= mesi 0) (> mesi 12))
+     (set_tile "error" "Mes Inválido")
+     (eval nil)
+   )
+   ((or (not mesi) (<= mesi 0)
+    (and (<= mesi 6) (= (rem mesi 2) 0) (> diai 30))
+    (and (> mesi 8) (/= (rem mesi 2) 0) (> diai 30)))
+     (set_tile "error" "Dia > 30 - Inválido")
+     (eval nil)
+   )  
+   ((or (not mesi) (<= mesi 0)
+    (and (<= mesi 7) (/= (rem mesi 2) 0) (> diai 31))
+    (and (>= mesi 8) (= (rem mesi 2) 0) (> diai 31)))
+     (set_tile "error" "Dia > 31 - Inválido")
+     (eval nil)
+   )  
+   ((or (not anoi) (< anoi 98) (> anoi 2100))
+     (set_tile "error" "Ano Inválido")
+     (eval nil)
+   )
+   ((or (and (/= (rem (/ anoi 4.0)) 0) (= mesi 2) (> diai 28)) 
+        (and (= (rem (/ anoi 4.0)) 0) (= mesi 2) (> diai 29))) 
+     (set_tile "error" "Dia Inválido")
+     (eval nil)
+   )
+   (T
+    (done_dialog 1)                  ; termina quadro dialogo
+    (eval T)                         ; retorna ok 
+   )
+  )
+ )
+;--------------------------------------------------------------------------
+ (defun setdef ( ) 
+
+  (setq flgniv "0")          ; Flag de nivel nao encontrado
+  (setq nivel  "0")          ; Nivel de agua
+
+  (setq data (rtos (getvar "cdate") 2 0))   ; Data do sistema
+  (setq dia  (substr data 7))
+  (setq mes  (substr data 5 2)) 
+  (setq ano  (substr data 3 2))
+
+ )
+; -------------------------------------------------------------------
+ (defun escreve ( / datout  index  nivelr  nivout  ptblk  ptext1
+                    ptext2  ptniv  string
+                )
+
+  (command "._style" "romans" "" "" "" "" "" "" "")
+
+  (setq datout (strcat dia "/" mes "/" ano))
+
+
+  (if (= flgniv "1")
+   (progn
+
+    (setq nivelr  (atof nivel))       ; Nivel tipo real
+    (setq nivout  (rtos nivelr 2 2))  ; Valor de exibicao do nivel
+
+    (if (and (> nivelr (* (1- formato) 20)) (<= nivelr (* formato 20)))
+     (setq nivelr (- nivelr (* (1- formato) 20)))  ; Nivel convertido p/ pagina - tipo real
+    )
+
+    (if (setq index (procura "." nivout))
+     (progn
+      (if (= index (1- (strlen nivout)))
+        (setq nivout (strcat (substr nivout 1 (1- index)) ","
+                             (substr nivout (1+ index)) "0"))
+        (setq nivout (strcat (substr nivout 1 (1- index)) ","
+                             (substr nivout (1+ index))))
+      )
+     )
+     (setq nivout (strcat nivout ",00"))
+    )
+
+
+     (setq
+      ptblk   (list (car ptref)(- (cadr ptref) (* nivelr altlin)))
+      ptniv   (list (+ (car ptref) 6.75) (cadr ptblk))
+      ptext1  (list (+ (car ptref) 6.75) (- (cadr ptblk) 6.0))
+      ptext2  (polar ptext1 (/ (* 3.0 pi) 2.0) (+ 1 (* 2.0 altxt2)))
+     )
+    (command "._text" "_mc" ptniv altxt1 0 nivout)
+    (command "._insert" "agua" ptblk "" "" "")
+    (command "._text" "_tc" ptext1 altxt2 0 "EM")
+    (command "._text" "_tc" ptext2 altxt2 0 datout)
+   )
+   (progn
+    (setq ptblk (polar ptref (/ (* 3.0 pi) 2.0) (* 4.0 altlin)))
+    (setq string (strcat "EM " datout))
+    (command "._text" "_tc" (list (+ (car ptref) 3.75) (- (cadr ptref) 40)) altxt1 90 "NÃO ENCONTRADO")
+    (command "._text" "_bc" (list (+ (car ptref) 10.75) (- (cadr ptref) 40)) altxt1 90 string)
+   )
+  )
+ )
+  
+; ---------------- Main Program -------------------------
+
+  (setq oldecho (getvar "cmdecho"))
+  (setq oldlay  (getvar "clayer"))
+  (setq formato (getvar "useri1"))
+
+  (setvar "osmode" 0)
+  (setvar "cmdecho"  0)
+  (setvar "clayer" "niv_agua")
+  (command "osnap" "int")
+
+  (setq
+   ptins (list (getvar "userr1")(getvar "userr2") 0)
+   ptref (list (+ (car ptins) 97.5) (+ (cadr ptins) 259.3637) 0.0); Inicio coluna Nivel de agua
+  )
+
+  (command "osnap" "none")
+
+  (setq 
+   prox     3
+   dcl_id   (load_dialog "c:/jorge1/agua.dcl")
+   altxt1   1.5
+   altxt2   1.5
+   altlin   10.0          ; Altura das linhas
+   lcolun   6.75          ; Largura coluna N.A. / 2.0
+   g:mens   "Inválido"
+   msgtel   (list "Nível de água " "Dia " "Mes " "Ano ")
+  )
+
+  (while (< 2 prox)
+    (if (not (new_dialog "cur_view" dcl_id))
+     (progn
+      (alert "QUADRO DE DIÁLOGO NÃO EXISTE")
+      (exit)
+     )
+    )
+   ; ----------- Inicializa Variaveis e Tiles ------------------- 
+
+    (setdef)
+
+    (set_tile "flgniv" flgniv)
+    (set_tile "dia" dia)
+    (set_tile "mes" mes)
+    (set_tile "ano" ano)
+    (mode_tile "nivel" 1)
+
+   ; ---------------- Define a‡oes dos tiles -------------------
+
+   (action_tile "flgniv" "(setq flgniv $value) (mode_tile \"nivel\" (- 1 (atoi $value)))")
+   (action_tile "nivel"  "(cl_erro)(if (get_val 0 $value)(setq nivel $value))")
+   (action_tile "dia" "(if (get_val 1 $value)(setq dia $value)(setq dia nil))") 
+   (action_tile "mes" "(if (get_val 2 $value)(setq mes $value)(setq mes nil))")  
+   (action_tile "ano" "(if (get_val 3 $value)(setq ano $value)(setq ano nil))")  
+   (action_tile "accept" "(checkok)")
+   (action_tile "cancel" "(done_dialog 0)") 
+  
+   (setq prox (start_dialog))
+
+   (if (= prox 1) (escreve))
+
+  )
+ 
+  (unload_dialog dcl_id)
+  (setvar "cmdecho" oldecho)   
+  (setvar "clayer" oldlay)
+
+  (princ ptref)
+     
+ (princ)
+)
