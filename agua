@@ -1,0 +1,47 @@
+// --------------------------- NIVEL DE AGUA -------------------------
+cur_view : dialog {
+    label ="NÍVEL DE ÁGUA";         
+    : column {
+       spacer;
+      : boxed_column {
+       : edit_box {
+            key        = "dia";
+            label      = "Dia:";
+            edit_width = 8;
+            mnemonic   = "D";
+       }
+       : edit_box {
+            key        = "mes";
+            label      = "Mes:";
+            edit_width = 8;
+            mnemonic   = "M";
+       }
+       : edit_box {
+            key        = "ano";
+            label      = "Ano: ";
+            edit_width = 8;
+            mnemonic   = "A";
+       }
+       spacer;
+      }
+      : boxed_column {
+          : toggle {
+              key      = "flgniv";
+              label    = "Nível de água";
+              mnemonic   = "N";
+          }
+          : edit_box {
+              key        = "nivel";
+              label      = "Valor do nível:";
+              edit_width = 8;
+              mnemonic   = "V";
+          }
+          spacer;
+      }
+    }
+    
+    spacer_1;
+    ok_cancel;
+    errtile;
+
+}
