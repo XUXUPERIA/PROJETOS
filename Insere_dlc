@@ -1,0 +1,41 @@
+form_view : dialog {
+    label ="INSERE FORMATO";         
+    spacer;
+      : row {
+        : column {
+           : boxed_column {
+               label = "Ponto de Insercao";
+               : button {
+                     key         = "pto_tl";
+                     label       = "Pick <";
+                     alignment   = right;
+                     mnemonic    = "P";
+                     fixed_width = true;
+               }
+               spacer;
+               : edit_box {
+                     key      = "x_pto";
+                     label    = "X:";
+                     edit_width = 10;
+                     mnemonic = "X";
+               }
+               : edit_box {
+                     key      = "y_pto";
+                     label    = "Y:";
+                     edit_width = 10;
+                     mnemonic = "Y";
+               }
+               spacer;
+           }
+           : popup_list {
+                label      = "Folha";
+                key        = "folha";
+                edit_width = 14;
+                mnemonic   = "F";
+           }
+        }
+      }
+      spacer_1;
+      ok_cancel;
+      errtile;
+}
