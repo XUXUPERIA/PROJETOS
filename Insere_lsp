@@ -1,0 +1,170 @@
+(defun c:folha ( / dcl_id   folis   g:mens   msgtel   prox   pt_ins
+                   t:pop    t:vpop  x_pto    y_pto
+               )
+ 
+;-------------------------------------------------------------------------
+ (defun cl_erro ()
+  (set_tile "error" " ")               ; limpa tile de erro
+ )
+;--------------------------------------------------------------------------
+ (defun ok_real (ind var / tmp)    ; ------ Checa entrada de numero real 
+
+  (cond 
+   ((distof var 2)                 ; verifica se variavel converte para REAL
+    var                            ; retorna valor da variavel
+   )
+   (T                              ; Se nao -> Exibe mensagem erro
+    (setq tmp (strcat (nth ind msgtel) g:mens))
+    (set_tile "error" tmp)
+    nil                            ; retorna nil
+   )                  
+  )
+ )
+;--------------------------------------------------------------------------
+ (defun get_val (idmsg valor)   ; -------- Tratamento de dado de entrada
+ 
+  (cl_erro)                                  ; limpa tile de erro
+
+  (if (ok_real idmsg valor)
+   (atof valor)                              ; OK -> retorna dado convertido
+   nil                                       ; dado invalido - retorna nil
+  ) 
+ )
+;--------------------------------------------------------------------------
+ (defun ok_dado ()
+
+  (if (or (= x_pto "INV")(= y_pto "INV"))
+   (progn
+    (set_tile "error" "Dados de Entrada incorretos")
+    (eval nil)
+   )
+   (eval t)
+  )
+ )
+
+;--------------------------------------------------------------------------
+ (defun set_pop ()
+  
+  (start_list "folha")
+  (mapcar 'add_list folis)
+  (end_list)
+  
+  (set_tile "folha" t:pop)
+ )
+;--------------------------------------------------------------------------
+ (defun alt_pop (valor)
+
+  (cl_erro)
+
+  (setq 
+   t:vpop (nth (atoi valor) folis)
+   t:pop  valor
+  )
+ )
+;--------------------------------------------------------------------------
+ (defun setdef () 
+
+  (if (not pt_ins)
+    (setq  pt_ins  (list (distof (setq x_pto "0.00"))
+                         (distof (setq y_pto "0.00"))"0.00"))
+    (setq 
+     x_pto (rtos (car pt_ins) 2 2)
+     y_pto (rtos (cadr pt_ins) 2 2)
+    ) 
+  )
+
+  (if (not t:pop) (setq t:pop  "0"))         ; Indice inicial popup 
+  (if (not t:vpop)(setq t:vpop "1 - 0 20"))  ; Valor inicial popup 
+
+ )
+
+; ------------------------------------------------------------------------
+ (defun r$insform ( / path num)
+
+  (setq path "c:/jorge1/folha_")
+  (setq num (1+ (atoi t:pop)))
+  (command "insert" (strcat path (itoa num)) pt_ins 1 1 0)
+  (command "zoom" "all")
+
+ )
+
+;;; ------------------------------------------------------------------------
+;;
+;; MAIN PROGRAM 
+;; 
+   
+; ------ Acessa variaveis do sistema ---------------------------------------
+
+  (setq oldecho (getvar "cmdecho"))
+
+  (setvar "osmode" 0)
+  (setvar "blipmode" 0) 
+  (setvar "cmdecho"  0)
+
+  (setq 
+   g:mens  " - Valor INVALIDO"
+   prox    3
+   dcl_id  (load_dialog "c:/jorge1/insere.dcl")
+      
+   folis   (list "(1)  0 - 20"   "(2)  >20 - 40"   "(3)  >40 - 60" "(4)  >60 - 80")
+   msgtel  (list "Coordenada X "  "Coordenada Y ")
+  )
+
+  (while (< 2 prox)
+   (if (not (new_dialog "form_view" dcl_id))
+    (progn
+     (alert "QUADRO DE DIALOGO NAO EXISTE")
+     (exit)
+    )
+   )
+   
+   (setdef)
+   (set_pop)
+
+   (set_tile "x_pto" x_pto)
+   (set_tile "y_pto" y_pto)
+
+   ; ----- Define a‡oes dos tiles ---------
+
+   (action_tile "pto_tl" "(done_dialog 3)") 
+   (action_tile "x_pto"  "(if (get_val 0 $value)(setq x_pto $value)(setq x_pto \"INV\"))")
+   (action_tile "y_pto"  "(if (get_val 1 $value)(setq y_pto $value)(setq y_pto \"INV\"))")
+   (action_tile "folha"  "(alt_pop $value)")
+   (action_tile "cancel" "(done_dialog 0)") 
+   (action_tile "accept" "(if (ok_dado)(done_dialog 1))")   
+
+   (setq prox (start_dialog))
+   
+   (cond
+    ((= prox 1)
+     (setq  pt_ins (list (distof x_pto) (distof y_pto) 0.0))
+     (setvar "userr1" (car pt_ins))
+     (setvar "userr2" (cadr pt_ins))
+     (setvar "useri1" (1+ (atoi t:pop)))
+
+;     (command "limits" pt_ins (list (+ (car pt_ins) 224) (+ (cadr pt_ins) 315)))
+     (setq pt1 (list (+ (car pt_ins) 20) (+ (cadr pt_ins) 10)))
+     (command "limits"  pt1 (list (+ (car pt1) 194) (+ (cadr pt1) 287)))
+     (command "grid" 10)
+                        
+     (r$insform)
+    )
+    ((= prox 3)
+     (setq pt_ins (getpoint))
+     (setvar "userr1" (car pt_ins))
+     (setvar "userr2" (cadr pt_ins))
+     (setq pt1 (list (+ (car pt_ins) 20) (+ (cadr pt_ins) 10)))
+     (command "limits"  pt1 (list (+ (car pt1) 194) (+ (cadr pt1) 287)))
+   ;  (command "limits" pt_ins (list (+ (car pt_ins) 224) (+ (cadr pt_ins) 315)))
+     (command "grid" 10)
+
+    ) 
+   ); fim cond
+
+  ); fim while
+ 
+  (unload_dialog dcl_id)
+  (setvar "cmdecho" oldecho)       ; restaura valor anterior de cmdecho
+  (command "ltscale" 12.5)
+  (princ)
+)
